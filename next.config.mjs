@@ -10,16 +10,17 @@ const nextConfig = {
     unoptimized: true,
   },
   experimental: {
-    // Ensure pdfkit is not bundled so it can load its font data files at runtime
     serverComponentsExternalPackages: ["pdfkit"],
   },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      const existingExternals = Array.isArray(config.externals) ? config.externals : []
-      config.externals = [...existingExternals, "pdfkit", "fontkit"]
+      const existingExternals = Array.isArray(config.externals)
+        ? config.externals
+        : [];
+      config.externals = [...existingExternals, "pdfkit"];
     }
-    return config
+    return config;
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;
