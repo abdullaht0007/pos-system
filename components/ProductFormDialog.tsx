@@ -1,31 +1,48 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { createProduct, updateProduct, uploadImage } from "@/lib/api"
-import { createProductSchema, type CreateProductInput } from "@/lib/schemas"
-import { parsePriceInput } from "@/lib/money"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createProduct, updateProduct, uploadImage } from "@/lib/api";
+import { createProductSchema, type CreateProductInput } from "@/lib/schemas";
+import { parsePriceInput } from "@/lib/money";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProductFormDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  mode: "create" | "edit"
-  product?: any
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: "create" | "edit";
+  product?: any;
 }
 
-export function ProductFormDialog({ open, onOpenChange, mode, product }: ProductFormDialogProps) {
-  const [isUploading, setIsUploading] = useState(false)
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
+export function ProductFormDialog({
+  open,
+  onOpenChange,
+  mode,
+  product,
+}: ProductFormDialogProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const form = useForm<CreateProductInput>({
     resolver: zodResolver(createProductSchema),
@@ -35,89 +52,116 @@ export function ProductFormDialog({ open, onOpenChange, mode, product }: Product
       priceCents: product?.priceCents || 0,
       imageUrl: product?.imageUrl || "",
     },
-  })
+  });
+
+  // Keep form values in sync when opening dialog or when product changes
+  useEffect(() => {
+    if (!open) return;
+    if (mode === "edit" && product) {
+      form.reset({
+        name: product.name || "",
+        sku: product.sku || "",
+        priceCents: product.priceCents || 0,
+        imageUrl: product.imageUrl || "",
+      });
+    } else if (mode === "create") {
+      form.reset({ name: "", sku: "", priceCents: 0, imageUrl: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode, product]);
 
   const createMutation = useMutation({
     mutationFn: createProduct,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] })
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       toast({
         title: "Success",
         description: "Product created successfully",
-      })
-      onOpenChange(false)
-      form.reset()
+      });
+      onOpenChange(false);
+      form.reset();
     },
     onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
-      })
+      });
     },
-  })
+  });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: CreateProductInput }) => updateProduct(id, data),
+    mutationFn: ({ id, data }: { id: string; data: CreateProductInput }) =>
+      updateProduct(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] })
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       toast({
         title: "Success",
         description: "Product updated successfully",
-      })
-      onOpenChange(false)
+      });
+      onOpenChange(false);
     },
     onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
-      })
+      });
     },
-  })
+  });
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    setIsUploading(true)
+    setIsUploading(true);
     try {
-      const result = await uploadImage(file)
-      form.setValue("imageUrl", result.url)
+      const result = await uploadImage(file);
+      form.setValue("imageUrl", result.url);
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to upload image",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsUploading(false)
+      setIsUploading(false);
     }
-  }
+  };
 
   const onSubmit = (data: CreateProductInput) => {
     if (mode === "create") {
-      createMutation.mutate(data)
+      createMutation.mutate(data);
     } else {
-      updateMutation.mutate({ id: product.id, data })
+      updateMutation.mutate({ id: product.id, data });
     }
-  }
+  };
 
   const handlePriceChange = (value: string) => {
     try {
-      const cents = parsePriceInput(value)
-      form.setValue("priceCents", cents)
-      form.clearErrors("priceCents")
+      const cents = parsePriceInput(value);
+      form.setValue("priceCents", cents);
+      form.clearErrors("priceCents");
     } catch (error) {
-      form.setError("priceCents", { message: "Invalid price format" })
+      form.setError("priceCents", { message: "Invalid price format" });
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="sm:max-w-[425px]"
+        onInteractOutside={(e) => {
+          if (createMutation.isPending || updateMutation.isPending)
+            e.preventDefault();
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Add Product" : "Edit Product"}</DialogTitle>
+          <DialogTitle>
+            {mode === "create" ? "Add Product" : "Edit Product"}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -156,8 +200,13 @@ export function ProductFormDialog({ open, onOpenChange, mode, product }: Product
                   <FormControl>
                     <Input
                       placeholder="0.00"
+                      inputMode="decimal"
+                      value={
+                        Number.isFinite(field.value)
+                          ? (Number(field.value) / 100).toFixed(2)
+                          : ""
+                      }
                       onChange={(e) => handlePriceChange(e.target.value)}
-                      defaultValue={(field.value / 100).toFixed(2)}
                     />
                   </FormControl>
                   <FormMessage />
@@ -180,7 +229,11 @@ export function ProductFormDialog({ open, onOpenChange, mode, product }: Product
                         onChange={handleImageUpload}
                         disabled={isUploading}
                       />
-                      {isUploading && <div className="text-sm text-muted-foreground">Uploading...</div>}
+                      {isUploading && (
+                        <div className="text-sm text-muted-foreground">
+                          Uploading...
+                        </div>
+                      )}
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -188,20 +241,27 @@ export function ProductFormDialog({ open, onOpenChange, mode, product }: Product
               )}
             />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
                 {createMutation.isPending || updateMutation.isPending
                   ? "Saving..."
                   : mode === "create"
-                    ? "Create"
-                    : "Update"}
+                  ? "Create"
+                  : "Update"}
               </Button>
             </div>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

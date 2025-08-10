@@ -1,37 +1,48 @@
-"use client"
+"use client";
 
-import { formatCents } from "@/lib/money"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Settings } from "lucide-react"
-import Image from "next/image"
+import { formatCents } from "@/lib/money";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Settings } from "lucide-react";
+import Image from "next/image";
 
 interface InventoryTableProps {
-  data: any
-  isLoading: boolean
-  onSetQuantity: (productId: string) => void
+  data: any;
+  isLoading: boolean;
+  onSetQuantity: (productId: string) => void;
 }
 
-export function InventoryTable({ data, isLoading, onSetQuantity }: InventoryTableProps) {
+export function InventoryTable({
+  data,
+  isLoading,
+  onSetQuantity,
+}: InventoryTableProps) {
   if (isLoading) {
-    return <div>Loading inventory...</div>
+    return <div>Loading inventory...</div>;
   }
 
-  const inventory = data?.data || []
+  const inventory = data?.data || [];
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Image</TableHead>
-            <TableHead>Product</TableHead>
-            <TableHead>SKU</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Quantity</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead className="min-w-[90px]">Image</TableHead>
+            <TableHead className="min-w-[160px]">Product</TableHead>
+            <TableHead className="min-w-[120px]">SKU</TableHead>
+            <TableHead className="min-w-[100px]">Price</TableHead>
+            <TableHead className="min-w-[110px]">Quantity</TableHead>
+            <TableHead className="min-w-[110px]">Status</TableHead>
+            <TableHead className="min-w-[140px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -59,7 +70,9 @@ export function InventoryTable({ data, isLoading, onSetQuantity }: InventoryTabl
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="font-medium">{item.product.name}</TableCell>
+                <TableCell className="font-medium">
+                  {item.product.name}
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{item.product.sku}</Badge>
                 </TableCell>
@@ -68,12 +81,28 @@ export function InventoryTable({ data, isLoading, onSetQuantity }: InventoryTabl
                   <span className="font-mono">{item.quantity}</span>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={item.quantity === 0 ? "destructive" : item.quantity < 10 ? "secondary" : "default"}>
-                    {item.quantity === 0 ? "Out of Stock" : item.quantity < 10 ? "Low Stock" : "In Stock"}
+                  <Badge
+                    variant={
+                      item.quantity === 0
+                        ? "destructive"
+                        : item.quantity < 10
+                        ? "secondary"
+                        : "default"
+                    }
+                  >
+                    {item.quantity === 0
+                      ? "Out of Stock"
+                      : item.quantity < 10
+                      ? "Low Stock"
+                      : "In Stock"}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm" onClick={() => onSetQuantity(item.productId)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onSetQuantity(item.productId)}
+                  >
                     <Settings className="w-4 h-4 mr-2" />
                     Set Quantity
                   </Button>
@@ -84,5 +113,5 @@ export function InventoryTable({ data, isLoading, onSetQuantity }: InventoryTabl
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

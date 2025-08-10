@@ -1,13 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { deleteProduct } from "@/lib/api"
-import { formatCents } from "@/lib/money"
-import { ProductFormDialog } from "./ProductFormDialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { deleteProduct } from "@/lib/api";
+import { formatCents } from "@/lib/money";
+import { ProductFormDialog } from "./ProductFormDialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,61 +24,66 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { Edit, Trash2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import Image from "next/image"
+} from "@/components/ui/alert-dialog";
+import { Edit, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
 
 interface ProductTableProps {
-  data: any
-  isLoading: boolean
-  page: number
-  onPageChange: (page: number) => void
+  data: any;
+  isLoading: boolean;
+  page: number;
+  onPageChange: (page: number) => void;
 }
 
-export function ProductTable({ data, isLoading, page, onPageChange }: ProductTableProps) {
-  const [editProduct, setEditProduct] = useState<any>(null)
-  const [deleteProductId, setDeleteProductId] = useState<string | null>(null)
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
+export function ProductTable({
+  data,
+  isLoading,
+  page,
+  onPageChange,
+}: ProductTableProps) {
+  const [editProduct, setEditProduct] = useState<any>(null);
+  const [deleteProductId, setDeleteProductId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const deleteMutation = useMutation({
     mutationFn: deleteProduct,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["products"] })
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       toast({
         title: "Success",
         description: "Product deleted successfully",
-      })
-      setDeleteProductId(null)
+      });
+      setDeleteProductId(null);
     },
     onError: (error) => {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
-      })
+      });
     },
-  })
+  });
 
   if (isLoading) {
-    return <div>Loading products...</div>
+    return <div>Loading products...</div>;
   }
 
-  const products = data?.data || []
-  const totalPages = data?.totalPages || 1
+  const products = data?.data || [];
+  const totalPages = data?.totalPages || 1;
 
   return (
     <>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Image</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="min-w-[90px]">Image</TableHead>
+              <TableHead className="min-w-[160px]">Name</TableHead>
+              <TableHead className="min-w-[120px]">SKU</TableHead>
+              <TableHead className="min-w-[100px]">Price</TableHead>
+              <TableHead className="min-w-[120px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -106,10 +118,18 @@ export function ProductTable({ data, isLoading, page, onPageChange }: ProductTab
                   <TableCell>{formatCents(product.priceCents)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setEditProduct(product)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditProduct(product)}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setDeleteProductId(product.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteProductId(product.id)}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -122,14 +142,22 @@ export function ProductTable({ data, isLoading, page, onPageChange }: ProductTab
       </div>
 
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+        <div className="flex justify-center gap-2 text-sm">
+          <Button
+            variant="outline"
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+          >
             Previous
           </Button>
           <span className="flex items-center px-4">
             Page {page} of {totalPages}
           </span>
-          <Button variant="outline" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+          <Button
+            variant="outline"
+            disabled={page >= totalPages}
+            onClick={() => onPageChange(page + 1)}
+          >
             Next
           </Button>
         </div>
@@ -142,18 +170,24 @@ export function ProductTable({ data, isLoading, page, onPageChange }: ProductTab
         product={editProduct}
       />
 
-      <AlertDialog open={!!deleteProductId} onOpenChange={() => setDeleteProductId(null)}>
+      <AlertDialog
+        open={!!deleteProductId}
+        onOpenChange={() => setDeleteProductId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the product.
+              This action cannot be undone. This will permanently delete the
+              product.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteProductId && deleteMutation.mutate(deleteProductId)}
+              onClick={() =>
+                deleteProductId && deleteMutation.mutate(deleteProductId)
+              }
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete"}
@@ -162,5 +196,5 @@ export function ProductTable({ data, isLoading, page, onPageChange }: ProductTab
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }
