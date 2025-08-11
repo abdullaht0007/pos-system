@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProducts, getInventory } from "@/lib/api";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -43,6 +43,18 @@ export default function SellPage() {
     queryKey: ["inventory"],
     queryFn: getInventory,
   });
+
+  // Hydrate receipt modal state after refresh if a sale was just completed
+  useEffect(() => {
+    try {
+      const lastSaleId = localStorage.getItem("lastSaleId");
+      const shouldShow = localStorage.getItem("showReceipt") === "1";
+      if (lastSaleId && shouldShow) {
+        setSaleId(lastSaleId);
+        setIsReceiptOpen(true);
+      }
+    } catch {}
+  }, []);
 
   const addToCart = (product: any, maxQuantity: number) => {
     setCart((prev) => {
@@ -95,6 +107,27 @@ export default function SellPage() {
     setSaleId(id);
     setIsReceiptOpen(true);
     clearCart();
+
+    // Persist state so the receipt modal reopens after refresh
+    try {
+      localStorage.setItem("lastSaleId", id);
+      localStorage.setItem("showReceipt", "1");
+    } catch {}
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000); // 1 second delay to allow receipt modal to show
+  };
+
+  const handleReceiptOpenChange = (open: boolean) => {
+    setIsReceiptOpen(open);
+    if (!open) {
+      try {
+        localStorage.removeItem("lastSaleId");
+        localStorage.removeItem("showReceipt");
+      } catch {}
+      setSaleId(null);
+    }
   };
 
   // Create a map of inventory quantities
@@ -175,7 +208,7 @@ export default function SellPage() {
 
       <ReceiptModal
         open={isReceiptOpen}
-        onOpenChange={setIsReceiptOpen}
+        onOpenChange={handleReceiptOpenChange}
         saleId={saleId}
       />
     </div>

@@ -1,11 +1,14 @@
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
-import { type NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
+import { type NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
     const sale = await prisma.sale.findUnique({
       where: { id: params.id },
@@ -16,15 +19,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           },
         },
       },
-    })
+    });
 
     if (!sale) {
-      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Sale not found" } }, { status: 404 })
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Sale not found" } },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(sale)
+    return NextResponse.json(sale);
   } catch (error) {
-    console.error("Error fetching sale:", error)
-    return NextResponse.json({ error: { code: "FETCH_ERROR", message: "Failed to fetch sale" } }, { status: 500 })
+    return NextResponse.json(
+      { error: { code: "FETCH_ERROR", message: "Failed to fetch sale" } },
+      { status: 500 }
+    );
   }
 }

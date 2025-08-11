@@ -87,14 +87,22 @@ async function main() {
     });
 
     if (product) {
-      await prisma.inventoryItem.upsert({
+      const existing = await prisma.inventoryItem.findFirst({
         where: { productId: product.id },
-        update: { quantity: item.quantity },
-        create: {
-          productId: product.id,
-          quantity: item.quantity,
-        },
       });
+      if (existing) {
+        await prisma.inventoryItem.update({
+          where: { id: existing.id },
+          data: { quantity: item.quantity },
+        });
+      } else {
+        await prisma.inventoryItem.create({
+          data: {
+            productId: product.id,
+            quantity: item.quantity,
+          },
+        });
+      }
     }
   }
 

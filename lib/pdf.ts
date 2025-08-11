@@ -7,7 +7,7 @@ type SaleWithItems = Sale & {
   })[];
 };
 
-export function generateReceiptPDF(sale: SaleWithItems): PDFDocument {
+export function generateReceiptPDF(sale: SaleWithItems) {
   const doc = new PDFDocument({ margin: 50 });
   // Use built-in Helvetica font; pdfkit resolves metrics internally
   doc.font("Helvetica");

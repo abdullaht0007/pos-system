@@ -32,29 +32,30 @@ export async function GET(
 
     const doc = generateReceiptPDF(sale);
 
-    // Convert PDF to buffer
-    const chunks: Buffer[] = [];
-    doc.on("data", (chunk) => chunks.push(chunk));
+    const chunks: Uint8Array[] = [];
+    doc.on("data", (chunk: Uint8Array) => chunks.push(chunk));
 
-    const pdfBuffer: Buffer = await new Promise((resolve, reject) => {
+    const buffer: Buffer = await new Promise((resolve, reject) => {
       doc.on("end", () => {
-        resolve(Buffer.concat(chunks));
+        resolve(Buffer.concat(chunks as any));
       });
-      doc.on("error", (err) => {
-        console.error("PDF generation stream error:", err);
-        reject(err);
+      doc.on("error", (err: unknown) => {
+        reject(err as any);
       });
       doc.end();
     });
 
-    return new NextResponse(pdfBuffer, {
+    // Copy Node Buffer into a new ArrayBuffer to avoid SharedArrayBuffer typing
+    const arrayBuffer = new ArrayBuffer(buffer.byteLength);
+    new Uint8Array(arrayBuffer).set(buffer);
+
+    return new Response(arrayBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="receipt-${sale.receiptNumber}.pdf"`,
       },
     });
   } catch (error) {
-    console.error("Error generating receipt PDF:", error);
     return NextResponse.json(
       {
         error: {

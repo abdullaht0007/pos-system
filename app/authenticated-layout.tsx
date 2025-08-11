@@ -22,6 +22,10 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
 }
 
 function Header() {
+  const pathname = usePathname();
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + "/");
+
   return (
     <header className="border-b">
       <div className="container mx-auto px-4 py-4">
@@ -30,25 +34,28 @@ function Header() {
             <Link href="/stock" className="text-xl font-bold">
               POS System
             </Link>
-            <nav className="hidden md:flex items-center space-x-4">
-              <Link
-                href="/stock"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            <nav className="hidden md:flex items-center space-x-2">
+              <Button
+                asChild
+                variant={isActive("/stock") ? "secondary" : "ghost"}
+                size="sm"
               >
-                Stock
-              </Link>
-              <Link
-                href="/products"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                <Link href="/stock">Stock</Link>
+              </Button>
+              <Button
+                asChild
+                variant={isActive("/products") ? "secondary" : "ghost"}
+                size="sm"
               >
-                Products
-              </Link>
-              <Link
-                href="/sell"
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                <Link href="/products">Products</Link>
+              </Button>
+              <Button
+                asChild
+                variant={isActive("/sell") ? "secondary" : "ghost"}
+                size="sm"
               >
-                Sell
-              </Link>
+                <Link href="/sell">Sell</Link>
+              </Button>
             </nav>
           </div>
           <div className="flex items-center space-x-2">
