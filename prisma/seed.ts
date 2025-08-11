@@ -64,46 +64,37 @@ async function main() {
     },
   ];
 
-  for (const product of products) {
-    await prisma.product.upsert({
-      where: { sku: product.sku },
-      update: {},
-      create: product,
-    });
-  }
-
-  // Create inventory items
-  const inventoryItems = [
-    { productSku: "LAP001", quantity: 10 },
-    { productSku: "PHN001", quantity: 25 },
-    { productSku: "HP001", quantity: 50 },
-    { productSku: "TAB001", quantity: 15 },
-    { productSku: "MS001", quantity: 100 },
-  ];
-
-  for (const item of inventoryItems) {
-    const product = await prisma.product.findUnique({
-      where: { sku: item.productSku },
-    });
-
-    if (product) {
-      await prisma.inventoryItem.upsert({
-        where: { productId: product.id },
-        update: { quantity: item.quantity },
-        create: {
-          productId: product.id,
-          quantity: item.quantity,
-        },
+  try {
+    for (const productData of products) {
+      const product = await prisma.product.upsert({
+        where: { sku: productData.sku },
+        update: {},
+        create: productData,
       });
-    }
-  }
 
-  console.log("✅ Database seeded successfully!");
+      // Create inventory item for this product
+      const existingInventory = await prisma.inventoryItem.findFirst({
+        where: { productId: product.id },
+      });
+
+      if (!existingInventory) {
+        await prisma.inventoryItem.create({
+          data: {
+            productId: product.id,
+            quantity: 10,
+          },
+        });
+      }
+    }
+    console.log("✅ Sample products and inventory created");
+  } catch (error) {
+    console.error("❌ Error seeding database:", error);
+  }
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Error seeding database:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(async () => {

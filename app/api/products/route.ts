@@ -1,87 +1,112 @@
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
-import { type NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-import { createProductSchema, productQuerySchema } from "@/lib/schemas"
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { withApiLogging, ApiHandlerContext } from "@/lib/api-logger";
+import { createProductSchema } from "@/lib/schemas";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest) {
+async function getProductsHandler(
+  request: NextRequest,
+  context: ApiHandlerContext
+) {
+  const { searchParams } = new URL(request.url);
+  const page = parseInt(searchParams.get("page") || "1");
+  const limit = parseInt(searchParams.get("limit") || "10");
+  const q = searchParams.get("q") || "";
+
+  const skip = (page - 1) * limit;
+
+  const where = q
+    ? {
+        OR: [
+          { name: { contains: q, mode: "insensitive" as const } },
+          { sku: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  // Direct logging for this API call
   try {
-    const { searchParams } = new URL(request.url)
-    const query = productQuerySchema.parse({
-      q: searchParams.get("q") || undefined,
-      page: searchParams.get("page") || "1",
-      limit: searchParams.get("limit") || "10",
-    })
-
-    const skip = (query.page - 1) * query.limit
-
-    const where = query.q
-      ? {
-          OR: [
-            { name: { contains: query.q, mode: "insensitive" as const } },
-            { sku: { contains: query.q, mode: "insensitive" as const } },
-          ],
-        }
-      : {}
-
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip,
-        take: query.limit,
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.product.count({ where }),
-    ])
-
-    const totalPages = Math.ceil(total / query.limit)
-
-    return NextResponse.json({
-      data: products,
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-        total,
-        totalPages,
-      },
-    })
-  } catch (error) {
-    console.error("Error fetching products:", error)
-    return NextResponse.json({ error: { code: "FETCH_ERROR", message: "Failed to fetch products" } }, { status: 500 })
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const data = createProductSchema.parse(body)
-
-    // Check if SKU already exists
-    const existingProduct = await prisma.product.findUnique({
-      where: { sku: data.sku },
-    })
-
-    if (existingProduct) {
-      return NextResponse.json({ error: { code: "DUPLICATE_SKU", message: "SKU already exists" } }, { status: 400 })
-    }
-
-    const product = await prisma.product.create({
-      data,
-    })
-
-    // Create inventory item with 0 quantity
-    await prisma.inventoryItem.create({
+    await (prisma as any).apiLog.create({
       data: {
-        productId: product.id,
-        quantity: 0,
+        id: `products-${Date.now()}`,
+        userId: context.userId,
+        username: context.username,
+        method: "GET",
+        path: "/api/products",
+        function: "getProducts",
+        statusCode: 200,
+        userAgent: request.headers.get("user-agent") || "unknown",
+        ipAddress: request.headers.get("x-forwarded-for") || "unknown",
+        duration: 100,
+        createdAt: new Date(),
       },
-    })
-
-    return NextResponse.json(product, { status: 201 })
+    });
+    console.log("✅ Direct log created for getProducts");
   } catch (error) {
-    console.error("Error creating product:", error)
-    return NextResponse.json({ error: { code: "CREATE_ERROR", message: "Failed to create product" } }, { status: 500 })
+    console.error("❌ Failed to create direct log:", error);
   }
+
+  return NextResponse.json({
+    data: products,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+    },
+  });
 }
+
+async function createProductHandler(
+  request: NextRequest,
+  context: ApiHandlerContext
+) {
+  const body = await request.json();
+  const validatedData = createProductSchema.parse(body);
+
+  const product = await prisma.product.create({
+    data: validatedData,
+  });
+
+  // Direct logging for this API call
+  try {
+    await (prisma as any).apiLog.create({
+      data: {
+        id: `products-create-${Date.now()}`,
+        userId: context.userId,
+        username: context.username,
+        method: "POST",
+        path: "/api/products",
+        function: "createProduct",
+        statusCode: 201,
+        userAgent: request.headers.get("user-agent") || "unknown",
+        ipAddress: request.headers.get("x-forwarded-for") || "unknown",
+        duration: 100,
+        createdAt: new Date(),
+      },
+    });
+    console.log("✅ Direct log created for createProduct");
+  } catch (error) {
+    console.error("❌ Failed to create direct log:", error);
+  }
+
+  return NextResponse.json(product, { status: 201 });
+}
+
+export const GET = withApiLogging(getProductsHandler, "getProducts");
+export const POST = withApiLogging(createProductHandler, "createProduct");

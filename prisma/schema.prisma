@@ -19,7 +19,32 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Relations
+  apiLogs ApiLog[]
+
   @@map("users")
+}
+
+model ApiLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  username    String?
+  method      String   // GET, POST, PUT, DELETE
+  path        String   // /api/products, /api/sales, etc.
+  function    String   // createProduct, updateSale, etc.
+  statusCode  Int      // 200, 400, 500, etc.
+  requestBody String?  // JSON string of request body
+  responseBody String? // JSON string of response body
+  userAgent   String?
+  ipAddress   String?
+  duration    Int?     // Response time in milliseconds
+  error       String?  // Error message if any
+  createdAt   DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("api_logs")
 }
 
 model Product {
@@ -40,30 +65,25 @@ model Product {
 model InventoryItem {
   id        String   @id @default(cuid())
   productId String
-  quantity  Int      @default(0)
+  quantity  Int
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([productId])
   @@map("inventory_items")
 }
 
-enum PaymentMethod {
-  CASH
-  CARD
-  OTHER
-}
-
 model Sale {
-  id              String        @id @default(cuid())
-  receiptNumber   String        @unique
+  id              String   @id @default(cuid())
+  receiptNumber   String   @unique
   subtotalCents   Int
-  discountPercent Int           @default(0)
-  discountCents   Int           @default(0)
+  discountPercent Int      @default(0)
+  discountCents   Int      @default(0)
   totalCents      Int
-  paymentMethod   PaymentMethod
-  createdAt       DateTime      @default(now())
+  paymentMethod   String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   items SaleItem[]
 
@@ -79,7 +99,7 @@ model SaleItem {
   lineTotalCents Int
 
   sale    Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("sale_items")
 }

@@ -1,42 +1,44 @@
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
-import { type NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-import { addInventorySchema } from "@/lib/schemas"
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { withApiLogging, ApiHandlerContext } from "@/lib/api-logger";
+import { z } from "zod";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const data = addInventorySchema.parse(body)
+const addInventorySchema = z.object({
+  productId: z.string(),
+  quantity: z.number().positive(),
+});
 
-    // Check if product exists
-    const product = await prisma.product.findUnique({
-      where: { id: data.productId },
-    })
+async function addInventoryHandler(request: NextRequest, context: ApiHandlerContext) {
+  const body = await request.json();
+  const { productId, quantity } = addInventorySchema.parse(body);
 
-    if (!product) {
-      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Product not found" } }, { status: 404 })
-    }
+  // Check if inventory item exists
+  const existingItem = await prisma.inventoryItem.findFirst({
+    where: { productId },
+  });
 
-    // Update or create inventory item
-    const inventoryItem = await prisma.inventoryItem.upsert({
-      where: { productId: data.productId },
-      update: {
-        quantity: {
-          increment: data.quantity,
-        },
-      },
-      create: {
-        productId: data.productId,
-        quantity: data.quantity,
-      },
-    })
+  if (existingItem) {
+    // Update existing inventory
+    const updatedItem = await prisma.inventoryItem.update({
+      where: { id: existingItem.id },
+      data: { quantity: existingItem.quantity + quantity },
+      include: { product: true },
+    });
 
-    return NextResponse.json(inventoryItem)
-  } catch (error) {
-    console.error("Error adding inventory:", error)
-    return NextResponse.json({ error: { code: "UPDATE_ERROR", message: "Failed to add inventory" } }, { status: 500 })
+    return NextResponse.json(updatedItem);
+  } else {
+    // Create new inventory item
+    const newItem = await prisma.inventoryItem.create({
+      data: { productId, quantity },
+      include: { product: true },
+    });
+
+    return NextResponse.json(newItem, { status: 201 });
   }
 }
+
+export const POST = withApiLogging(addInventoryHandler, "addInventory");

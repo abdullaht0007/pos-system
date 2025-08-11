@@ -49,6 +49,12 @@ function Header() {
               >
                 Sell
               </Link>
+              <Link
+                href="/admin/logs"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Admin Logs
+              </Link>
             </nav>
           </div>
           <div className="flex items-center space-x-2">

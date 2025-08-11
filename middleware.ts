@@ -24,9 +24,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // For now, just allow access if token exists
+  // For now, just allow access if token exists and set admin user info
   // TODO: Add proper token verification when database issues are resolved
-  return NextResponse.next();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-user-id", "admin-user-id");
+  requestHeaders.set("x-username", "admin");
+
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 }
 
 export const config = {

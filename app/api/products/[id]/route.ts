@@ -1,83 +1,55 @@
-export const runtime = "nodejs"
+export const runtime = "nodejs";
 
-import { type NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
-import { updateProductSchema } from "@/lib/schemas"
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { withApiLogging, ApiHandlerContext } from "@/lib/api-logger";
+import { updateProductSchema } from "@/lib/schemas";
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const product = await prisma.product.findUnique({
-      where: { id: params.id },
-    })
+async function getProductHandler(request: NextRequest, context: ApiHandlerContext) {
+  const { params } = context as any;
+  const { id } = params;
 
-    if (!product) {
-      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Product not found" } }, { status: 404 })
-    }
+  const product = await prisma.product.findUnique({
+    where: { id },
+  });
 
-    return NextResponse.json(product)
-  } catch (error) {
-    console.error("Error fetching product:", error)
-    return NextResponse.json({ error: { code: "FETCH_ERROR", message: "Failed to fetch product" } }, { status: 500 })
+  if (!product) {
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "Product not found" } },
+      { status: 404 }
+    );
   }
+
+  return NextResponse.json(product);
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const body = await request.json()
-    const data = updateProductSchema.parse(body)
+async function updateProductHandler(request: NextRequest, context: ApiHandlerContext) {
+  const { params } = context as any;
+  const { id } = params;
+  const body = await request.json();
+  const validatedData = updateProductSchema.parse(body);
 
-    // Check if product exists
-    const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id },
-    })
+  const product = await prisma.product.update({
+    where: { id },
+    data: validatedData,
+  });
 
-    if (!existingProduct) {
-      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Product not found" } }, { status: 404 })
-    }
-
-    // Check if SKU already exists (if being updated)
-    if (data.sku && data.sku !== existingProduct.sku) {
-      const duplicateSku = await prisma.product.findUnique({
-        where: { sku: data.sku },
-      })
-
-      if (duplicateSku) {
-        return NextResponse.json({ error: { code: "DUPLICATE_SKU", message: "SKU already exists" } }, { status: 400 })
-      }
-    }
-
-    const product = await prisma.product.update({
-      where: { id: params.id },
-      data,
-    })
-
-    return NextResponse.json(product)
-  } catch (error) {
-    console.error("Error updating product:", error)
-    return NextResponse.json({ error: { code: "UPDATE_ERROR", message: "Failed to update product" } }, { status: 500 })
-  }
+  return NextResponse.json(product);
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    // Check if product exists
-    const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id },
-    })
+async function deleteProductHandler(request: NextRequest, context: ApiHandlerContext) {
+  const { params } = context as any;
+  const { id } = params;
 
-    if (!existingProduct) {
-      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Product not found" } }, { status: 404 })
-    }
+  await prisma.product.delete({
+    where: { id },
+  });
 
-    await prisma.product.delete({
-      where: { id: params.id },
-    })
-
-    return NextResponse.json({ message: "Product deleted successfully" })
-  } catch (error) {
-    console.error("Error deleting product:", error)
-    return NextResponse.json({ error: { code: "DELETE_ERROR", message: "Failed to delete product" } }, { status: 500 })
-  }
+  return NextResponse.json({ message: "Product deleted successfully" });
 }
+
+export const GET = withApiLogging(getProductHandler, "getProduct");
+export const PUT = withApiLogging(updateProductHandler, "updateProduct");
+export const DELETE = withApiLogging(deleteProductHandler, "deleteProduct");
